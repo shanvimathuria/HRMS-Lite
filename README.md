@@ -71,11 +71,7 @@ app/
 
 Create a `.env` file in the project root with the following variables:
 
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=hrms_db
+DATABASE_URL=postgresql://<username>:<password>@<host>:5432/<database>
 
 ## Create Virtual Environment
 
