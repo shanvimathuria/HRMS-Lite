@@ -1,0 +1,43 @@
+# ======================
+# Node / Frontend
+# ======================
+node_modules/
+dist/
+build/
+.vite/
+
+# ======================
+# Python / Backend
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# ======================
+# Logs
+# ======================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ======================
+# OS / Editor
+# ======================
+.DS_Store
+.vscode/
+.idea/
+.history/
+
+# ======================
+# Misc
+# ======================
+*.sqlite
+*.db
+*.bak
+*.backup
