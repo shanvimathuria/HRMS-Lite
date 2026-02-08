@@ -41,6 +41,18 @@ class AttendanceResponse(AttendanceBase):
         from_attributes = True
 
 
+# Schema for attendance response with employee information
+class AttendanceWithEmployeeResponse(BaseModel):
+    employee_db_id: int  # Database primary key ID
+    employee_business_id: str  # Business employee ID (like EMP001)
+    employee_name: str
+    attendance_date: date
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # Schema for filtered attendance response with total present days
 class AttendanceFilterResponse(BaseModel):
     employee_id: int

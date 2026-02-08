@@ -56,7 +56,7 @@ def mark_attendance(
 
 #show attendance 
 
-@router.get("/{employee_id}", response_model=list[schemas.AttendanceResponse])
+@router.get("/{employee_id}", response_model=list[schemas.AttendanceWithEmployeeResponse])
 def get_attendance_for_employee(
     employee_id: int,
     db: Session = Depends(get_db)
@@ -68,14 +68,26 @@ def get_attendance_for_employee(
     if not employee:
         raise HTTPException(
             status_code=404,
-            detail="Employee not found"
+            detail=f"Employee with database ID {employee_id} not found"
         )
 
     attendance_records = db.query(models.Attendance).filter(
-        models.Attendance.employee_id == employee_id
+        models.Attendance.employee_id == employee.id
     ).order_by(models.Attendance.attendance_date.desc()).all()
 
-    return attendance_records
+    # Add employee info to each attendance record
+    response_data = []
+    for record in attendance_records:
+        response_data.append({
+            "employee_db_id": employee.id,
+            "employee_business_id": employee.employee_id,
+            "employee_name": employee.full_name,
+            "attendance_date": record.attendance_date,
+            "status": record.status,
+            "created_at": record.created_at
+        })
+
+    return response_data
 
 
 # filter attendance by date with total present days per employee

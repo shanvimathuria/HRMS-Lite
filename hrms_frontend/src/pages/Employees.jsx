@@ -16,13 +16,19 @@ export default function Employees() {
     department: "",
   });
 
+  // Attendance modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [attendance, setAttendance] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceError, setAttendanceError] = useState("");
+
   /* ---------------- FETCH EMPLOYEES ---------------- */
   const fetchEmployees = async () => {
     try {
       setLoading(true);
       const data = await getEmployees();
 
-      // ✅ IMPORTANT: backend already returns an array
       console.log("EMPLOYEES FROM API 👉", data);
 
       setEmployees(Array.isArray(data) ? data : []);
@@ -58,7 +64,7 @@ export default function Employees() {
         email: "",
         department: "",
       });
-      fetchEmployees(); // refresh list
+      fetchEmployees();
     } catch (err) {
       console.error("ADD EMPLOYEE ERROR 👉", err);
       alert("Failed to add employee");
@@ -76,6 +82,37 @@ export default function Employees() {
       console.error("DELETE EMPLOYEE ERROR 👉", err);
       alert("Failed to delete employee");
     }
+  };
+
+  /* ---------------- ATTENDANCE MODAL ---------------- */
+  const openAttendanceModal = async (emp) => {
+    setSelectedEmployee(emp);
+    setIsModalOpen(true);
+    setAttendance([]);
+    setAttendanceError("");
+    setAttendanceLoading(true);
+
+    try {
+      const res = await fetch(
+        `https://hrms-lite-backend-o8u0.onrender.com/attendance/${emp.employee_id}`,
+        { headers: { accept: "application/json" } }
+      );
+      if (!res.ok) throw new Error("Failed to load attendance");
+      const data = await res.json();
+      setAttendance(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("FETCH ATTENDANCE ERROR 👉", err);
+      setAttendanceError("Failed to load attendance");
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const closeAttendanceModal = () => {
+    setIsModalOpen(false);
+    setSelectedEmployee(null);
+    setAttendance([]);
+    setAttendanceError("");
   };
 
   /* ---------------- UI ---------------- */
@@ -149,7 +186,11 @@ export default function Employees() {
 
             <tbody>
               {employees.map((emp) => (
-                <tr key={emp.id} className="border-t">
+                <tr
+                  key={emp.id}
+                  className="border-t cursor-pointer hover:bg-gray-50"
+                  onClick={() => openAttendanceModal(emp)}
+                >
                   <td className="px-6 py-4">
                     {emp.employee_id}
                   </td>
@@ -164,7 +205,10 @@ export default function Employees() {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <button
-                      onClick={() => handleDelete(emp.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(emp.id);
+                      }}
                       className="text-red-600 hover:text-red-800 text-lg"
                     >
                       🗑
@@ -180,6 +224,70 @@ export default function Employees() {
               No employees found
             </p>
           )}
+        </div>
+      )}
+
+      {/* ATTENDANCE MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Attendance Details
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {selectedEmployee?.full_name} (ID: {selectedEmployee?.employee_id})
+                </p>
+              </div>
+              <button
+                onClick={closeAttendanceModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            {attendanceLoading ? (
+              <p className="text-gray-500">Loading attendance...</p>
+            ) : attendanceError ? (
+              <p className="text-red-600">{attendanceError}</p>
+            ) : attendance.length === 0 ? (
+              <p className="text-gray-500">No attendance records found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Date</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Record ID</th>
+                      <th className="px-4 py-2 text-left">Created At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendance.map((a) => (
+                      <tr key={a.id} className="border-t">
+                        <td className="px-4 py-2">{a.attendance_date}</td>
+                        <td className="px-4 py-2">{a.status}</td>
+                        <td className="px-4 py-2">{a.id}</td>
+                        <td className="px-4 py-2">{a.created_at}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={closeAttendanceModal}
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
