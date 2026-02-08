@@ -7,16 +7,29 @@ from app.routes import employees
 from app.routes import attendance
 from app.routes import dashboard
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
-app = FastAPI(title="HRMS Lite API")
+
+
+app = FastAPI(
+    title="HRMS Lite API",
+    root_path=""
+)
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"]
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or ["*"] for development
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-
 )
 
 models.Base.metadata.create_all(bind=engine)
