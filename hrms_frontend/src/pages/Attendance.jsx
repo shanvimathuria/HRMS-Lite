@@ -1,36 +1,91 @@
-import { useState } from "react";
-
-const employees = [
-  { empId: "EMP001", name: "Amit Sharma" },
-  { empId: "EMP002", name: "Neha Verma" },
-  { empId: "EMP003", name: "Rahul Singh" },
-];
+import { useEffect, useState } from "react";
+import { getEmployees } from "../api/employees.api";
+import {
+  getAttendanceByEmployee,
+  markAttendance,
+} from "../api/attendance.api";
 
 export default function Attendance() {
+  const [employees, setEmployees] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
-  const [attendance, setAttendance] = useState([]);
+  const [attendanceMap, setAttendanceMap] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const markAttendance = (empId, status) => {
+  /* ---------------- Fetch Employees ---------------- */
+  const fetchEmployees = async () => {
+    try {
+      const data = await getEmployees();
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (err) {
+      alert("Failed to load employees");
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  /* ---------------- Fetch Attendance for Date ---------------- */
+  const fetchAttendanceForDate = async () => {
+    if (!selectedDate || employees.length === 0) return;
+
+    try {
+      setLoading(true);
+      const map = {};
+
+      for (const emp of employees) {
+        const records = await getAttendanceByEmployee(emp.id);
+
+        const recordForDate = records.find(
+          (r) => r.attendance_date === selectedDate
+        );
+
+        map[emp.id] = recordForDate
+          ? recordForDate.status
+          : "Not Marked";
+      }
+
+      setAttendanceMap(map);
+    } catch (err) {
+      console.error("FETCH ATTENDANCE ERROR 👉", err);
+      alert("Failed to load attendance");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendanceForDate();
+  }, [selectedDate, employees]);
+
+  /* ---------------- Mark Attendance ---------------- */
+  const handleMarkAttendance = async (employeeDbId, status) => {
     if (!selectedDate) {
       alert("Please select a date first");
       return;
     }
 
-    setAttendance((prev) => {
-      const filtered = prev.filter(
-        (a) => !(a.empId === empId && a.date === selectedDate)
-      );
-      return [...filtered, { empId, date: selectedDate, status }];
-    });
+    const payload = {
+      employee_db_id: employeeDbId,
+      attendance_date: selectedDate,
+      status,
+    };
+
+    try {
+      await markAttendance(payload);
+
+      // Update UI instantly
+      setAttendanceMap((prev) => ({
+        ...prev,
+        [employeeDbId]: status,
+      }));
+    } catch (err) {
+      console.error("MARK ATTENDANCE ERROR 👉", err);
+      alert("Failed to mark attendance");
+    }
   };
 
-  const getStatus = (empId) => {
-    const record = attendance.find(
-      (a) => a.empId === empId && a.date === selectedDate
-    );
-    return record ? record.status : "Not Marked";
-  };
-
+  /* ---------------- UI ---------------- */
   return (
     <div>
       {/* Header */}
@@ -52,7 +107,7 @@ export default function Attendance() {
         />
       </div>
 
-      {/* Attendance Table */}
+      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600">
@@ -66,12 +121,18 @@ export default function Attendance() {
 
           <tbody>
             {employees.map((emp) => {
-              const status = getStatus(emp.empId);
+              const status =
+                attendanceMap[emp.id] || "Not Marked";
 
               return (
-                <tr key={emp.empId} className="border-t">
-                  <td className="px-6 py-4">{emp.empId}</td>
-                  <td className="px-6 py-4">{emp.name}</td>
+                <tr key={emp.id} className="border-t">
+                  <td className="px-6 py-4">
+                    {emp.employee_id}
+                  </td>
+
+                  <td className="px-6 py-4">
+                    {emp.full_name}
+                  </td>
 
                   <td className="px-6 py-4 text-center">
                     <span
@@ -90,15 +151,16 @@ export default function Attendance() {
                   <td className="px-6 py-4 text-center space-x-2">
                     <button
                       onClick={() =>
-                        markAttendance(emp.empId, "Present")
+                        handleMarkAttendance(emp.id, "Present")
                       }
                       className="bg-green-600 text-white px-3 py-1 rounded text-xs"
                     >
                       Present
                     </button>
+
                     <button
                       onClick={() =>
-                        markAttendance(emp.empId, "Absent")
+                        handleMarkAttendance(emp.id, "Absent")
                       }
                       className="bg-red-600 text-white px-3 py-1 rounded text-xs"
                     >
@@ -108,8 +170,25 @@ export default function Attendance() {
                 </tr>
               );
             })}
+
+            {employees.length === 0 && (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="text-center py-6 text-gray-500"
+                >
+                  No employees found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+
+        {loading && (
+          <p className="text-center py-4 text-gray-500">
+            Loading attendance...
+          </p>
+        )}
       </div>
     </div>
   );

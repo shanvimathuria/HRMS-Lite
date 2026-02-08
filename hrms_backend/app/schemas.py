@@ -19,7 +19,7 @@ class EmployeeResponse(EmployeeBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class AttendanceBase(BaseModel):
@@ -38,4 +38,17 @@ class AttendanceResponse(AttendanceBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+# Schema for filtered attendance response with total present days
+class AttendanceFilterResponse(BaseModel):
+    employee_id: int
+    employee_name: str
+    employee_email: str
+    department: str
+    total_present_days: int
+    total_records: int  # Total attendance records in the date range
+    
+    class Config:
+        from_attributes = True

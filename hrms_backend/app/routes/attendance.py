@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.database import get_db
 from app import models, schemas
@@ -77,9 +78,9 @@ def get_attendance_for_employee(
     return attendance_records
 
 
-# filter attendance by date(bonus functionality)
+# filter attendance by date with total present days per employee
 
-@router.get("/filter/", response_model=list[schemas.AttendanceResponse])
+@router.get("/filter/", response_model=list[schemas.AttendanceFilterResponse])
 def filter_attendance_by_date(
     start_date: date = Query(...),
     end_date: date = Query(...),
@@ -91,8 +92,39 @@ def filter_attendance_by_date(
             detail="start_date cannot be after end_date"
         )
 
-    records = db.query(models.Attendance).filter(
-        models.Attendance.attendance_date.between(start_date, end_date)
-    ).order_by(models.Attendance.attendance_date).all()
+    # Get all attendance records in the date range with employee info
+    attendance_records = (
+        db.query(models.Attendance, models.Employee)
+        .join(models.Employee, models.Employee.id == models.Attendance.employee_id)
+        .filter(models.Attendance.attendance_date.between(start_date, end_date))
+        .all()
+    )
 
-    return records
+    if not attendance_records:
+        return []  # Return empty list instead of raising an error
+
+    # Process the data to group by employee
+    employee_summary = {}
+    
+    for attendance, employee in attendance_records:
+        emp_id = employee.id
+        
+        if emp_id not in employee_summary:
+            employee_summary[emp_id] = {
+                "employee_id": emp_id,
+                "employee_name": employee.full_name,
+                "employee_email": employee.email,
+                "department": employee.department,
+                "total_present_days": 0,
+                "total_records": 0
+            }
+        
+        employee_summary[emp_id]["total_records"] += 1
+        if attendance.status.lower() == "present":
+            employee_summary[emp_id]["total_present_days"] += 1
+
+    # Convert to list and sort by employee name
+    result = list(employee_summary.values())
+    result.sort(key=lambda x: x["employee_name"])
+    
+    return result
