@@ -1,290 +1,187 @@
-import { useState, useEffect } from 'react'
-import { PlusIcon, UserGroupIcon } from '@heroicons/react/24/outline'
-import EmptyState from '../components/EmptyState'
-import AddEmployeeModal from '../components/AddEmployeeModal'
-import EmployeeTable from '../components/EmployeeTable'
-import { employeeAPI } from '../api/api'
+import { useEffect, useState } from "react";
+import {
+  getEmployees,
+  createEmployee,
+  deleteEmployee,
+} from "../api/employees.api";
 
-const Employees = () => {
-  const [employees, setEmployees] = useState([])
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
+export default function Employees() {
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Load employees on component mount
-  useEffect(() => {
-    console.log('🔄 Employees component mounted, fetching employees...')
-    console.log('🌐 Will connect to: https://hrms-lite-backend-o8u0.onrender.com/employees/')
-    
-    // Add a small delay to ensure component is fully mounted
-    const timer = setTimeout(() => {
-      fetchEmployees()
-    }, 100)
-    
-    return () => clearTimeout(timer)
-  }, [])
+  const [form, setForm] = useState({
+    employee_id: "",
+    full_name: "",
+    email: "",
+    department: "",
+  });
 
+  /* ---------------- FETCH EMPLOYEES ---------------- */
   const fetchEmployees = async () => {
     try {
-      setIsLoading(true) 
-      setError('')
-      console.log('📡 Starting to fetch employees...')
-      
-      const response = await employeeAPI.getAll()
-      console.log('✅ API Response:', response)
-      console.log('✅ Employees data:', response.data)
-      
-      // Ensure we have an array and log the count
-      const employeesList = Array.isArray(response.data) ? response.data : []
-      console.log('📋 Setting employees list:', employeesList)
-      console.log('📊 Employee count:', employeesList.length)
-      
-      setEmployees(employeesList)
-      
+      setLoading(true);
+      const data = await getEmployees();
+
+      // ✅ IMPORTANT: backend already returns an array
+      console.log("EMPLOYEES FROM API 👉", data);
+
+      setEmployees(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('❌ Error fetching employees:', err)
-      console.error('❌ Error details:', {
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data
-      })
-      
-      // Clear employees on error and don't set error message (as requested)
-      setEmployees([])
-      
+      console.error("FETCH EMPLOYEES ERROR 👉", err);
+      alert("Failed to load employees");
     } finally {
-      setIsLoading(false)
-      console.log('📡 Fetch complete')
+      setLoading(false);
     }
-  }
+  };
 
-  const handleAddEmployee = () => {
-    setIsModalOpen(true)
-    setError('')
-    setSuccessMessage('')
-  }
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-  }
+  /* ---------------- ADD EMPLOYEE ---------------- */
+  const handleAddEmployee = async () => {
+    if (
+      !form.employee_id ||
+      !form.full_name ||
+      !form.email ||
+      !form.department
+    ) {
+      alert("All fields are required");
+      return;
+    }
 
-  const handleSubmitEmployee = async (employeeData) => {
     try {
-      setIsSubmitting(true)
-      setError('')
-      console.log('📝 Form data received:', employeeData)
-      
-      // Log the exact data being sent to API
-      console.log('📤 Sending to API:', JSON.stringify(employeeData, null, 2))
-      console.log('🌐 POST URL: https://hrms-lite-backend-o8u0.onrender.com/employees/')
-      
-      // Create new employee via API
-      const response = await employeeAPI.create(employeeData)
-      console.log('✅ API Response:', response)
-      console.log('✅ Created employee:', response.data)
-      
-      // Add new employee to the list
-      const newEmployee = response.data
-      setEmployees(prev => {
-        const updated = [...prev, newEmployee]
-        console.log('📋 Updated employee list:', updated)
-        return updated
-      })
-      
-      // Close modal and show success message
-      setIsModalOpen(false)
-      setSuccessMessage(`Employee ${employeeData.full_name} has been added successfully!`)
-      
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccessMessage(''), 5000)
-      
+      await createEmployee(form);
+      setForm({
+        employee_id: "",
+        full_name: "",
+        email: "",
+        department: "",
+      });
+      fetchEmployees(); // refresh list
     } catch (err) {
-      console.error('❌ Error creating employee:', err)
-      console.error('❌ Error response:', err.response)
-      console.error('❌ Error data:', err.response?.data)
-      console.error('❌ Error status:', err.response?.status)
-      
-      // Log more details for debugging
-      if (err.response) {
-        console.error('📤 Request that failed:', {
-          url: err.config?.url,
-          method: err.config?.method,
-          data: err.config?.data
-        })
-      }
-      
-      // Don't show error message in UI (as requested) but log it
-      console.error('❌ Create employee failed:', err.message)
-      
-    } finally {
-      setIsSubmitting(false)
+      console.error("ADD EMPLOYEE ERROR 👉", err);
+      alert("Failed to add employee");
     }
-  }
+  };
 
-  const handleEditEmployee = (employee) => {
-    // TODO: Implement edit functionality
-    console.log('Edit employee:', employee)
-  }
+  /* ---------------- DELETE EMPLOYEE ---------------- */
+  const handleDelete = async (dbId) => {
+    if (!window.confirm("Delete this employee?")) return;
 
-  const handleDeleteEmployee = async (employee) => {
-    if (window.confirm(`Are you sure you want to delete ${employee.full_name}?`)) {
-      try {
-        console.log('🗑️ Attempting to delete employee:', employee)
-        
-        // Use the database ID (not employee_id) for the DELETE endpoint
-        // API expects: DELETE /employees/{employee_db_id}
-        const employee_db_id = employee.id // This is the database ID from your API response
-        
-        console.log('🗑️ Using employee_db_id for deletion:', employee_db_id)
-        console.log('🌐 DELETE URL will be:', `https://hrms-lite-backend-o8u0.onrender.com/employees/${employee_db_id}`)
-        
-        await employeeAPI.delete(employee_db_id)
-        
-        // Remove employee from list using the database ID
-        setEmployees(prev => prev.filter(emp => emp.id !== employee.id))
-        
-        setSuccessMessage(`Employee ${employee.full_name} has been deleted.`)
-        setTimeout(() => setSuccessMessage(''), 3000)
-        
-      } catch (err) {
-        console.error('❌ Error deleting employee:', err)
-        console.error('❌ Delete failed for employee:', employee)
-        console.error('❌ Error response:', err.response)
-      }
+    try {
+      await deleteEmployee(dbId);
+      fetchEmployees();
+    } catch (err) {
+      console.error("DELETE EMPLOYEE ERROR 👉", err);
+      alert("Failed to delete employee");
     }
-  }
+  };
 
+  /* ---------------- UI ---------------- */
   return (
-    <div className="p-8 bg-gray-100 min-h-full">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Employees</h1>
-          <p className="text-gray-600 mt-2">Manage your team members</p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={async () => {
-              console.log('🧪 MANUAL API TEST STARTING...')
-              console.log('🌐 Testing URL: https://hrms-lite-backend-o8u0.onrender.com/employees/')
-              try {
-                // Method 1: Direct fetch
-                console.log('🧪 Method 1: Direct fetch')
-                const response1 = await fetch('https://hrms-lite-backend-o8u0.onrender.com/employees/', {
-                  method: 'GET',
-                  headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                  },
-                })
-                const data1 = await response1.json()
-                console.log('🧪 Direct fetch result:', data1)
-                
-                // Method 2: Using our API
-                console.log('🧪 Method 2: Using our employeeAPI')
-                const response2 = await employeeAPI.getAll()
-                console.log('🧪 API result:', response2.data)
-                
-                // Update state with the data
-                setEmployees(Array.isArray(data1) ? data1 : [])
-                console.log('🧪 State updated with employees')
-                
-              } catch (err) {
-                console.error('🧪 Test failed:', err)
-                console.error('🧪 Error details:', {
-                  message: err.message,
-                  status: err.response?.status,
-                  data: err.response?.data
-                })
-              }
-            }}
-            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 font-medium transition-colors duration-200 shadow-sm"
-          >
-            🧪 Test API
-          </button>
-          <button
-            onClick={fetchEmployees}
-            disabled={isLoading}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 font-medium transition-colors duration-200 shadow-sm disabled:opacity-50"
-          >
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              '🔄'
-            )}
-            Refresh
-          </button>
-          <button
-            onClick={handleAddEmployee}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-medium transition-colors duration-200 shadow-sm"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Add Employee
-          </button>
-        </div>
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900">
+        Employees
+      </h1>
+      <p className="text-sm text-gray-500 mb-6">
+        Manage your organization employees
+      </p>
+
+      {/* ADD EMPLOYEE FORM */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
+        <input
+          placeholder="Employee ID"
+          className="border px-3 py-2 rounded"
+          value={form.employee_id}
+          onChange={(e) =>
+            setForm({ ...form, employee_id: e.target.value })
+          }
+        />
+        <input
+          placeholder="Full Name"
+          className="border px-3 py-2 rounded"
+          value={form.full_name}
+          onChange={(e) =>
+            setForm({ ...form, full_name: e.target.value })
+          }
+        />
+        <input
+          placeholder="Email"
+          className="border px-3 py-2 rounded"
+          value={form.email}
+          onChange={(e) =>
+            setForm({ ...form, email: e.target.value })
+          }
+        />
+        <input
+          placeholder="Department"
+          className="border px-3 py-2 rounded"
+          value={form.department}
+          onChange={(e) =>
+            setForm({ ...form, department: e.target.value })
+          }
+        />
+
+        <button
+          onClick={handleAddEmployee}
+          className="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700"
+        >
+          Add
+        </button>
       </div>
 
-      {/* Success Message */}
-      {successMessage && (
-        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
-          {successMessage}
+      {/* TABLE */}
+      {loading ? (
+        <p className="text-gray-500">Loading employees...</p>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-600">
+              <tr>
+                <th className="px-6 py-3 text-left">Employee ID</th>
+                <th className="px-6 py-3 text-left">Full Name</th>
+                <th className="px-6 py-3 text-left">Email</th>
+                <th className="px-6 py-3 text-left">Department</th>
+                <th className="px-6 py-3 text-center">Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {employees.map((emp) => (
+                <tr key={emp.id} className="border-t">
+                  <td className="px-6 py-4">
+                    {emp.employee_id}
+                  </td>
+                  <td className="px-6 py-4">
+                    {emp.full_name}
+                  </td>
+                  <td className="px-6 py-4">
+                    {emp.email}
+                  </td>
+                  <td className="px-6 py-4">
+                    {emp.department}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      onClick={() => handleDelete(emp.id)}
+                      className="text-red-600 hover:text-red-800 text-lg"
+                    >
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {employees.length === 0 && (
+            <p className="text-center text-gray-500 py-6">
+              No employees found
+            </p>
+          )}
         </div>
       )}
-
-      {/* Employee List or Empty State */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 min-h-[400px]">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-gray-600">Loading employees...</span>
-            </div>
-          </div>
-        ) : employees.length === 0 ? (
-          <EmptyState
-            icon={UserGroupIcon}
-            title="No employees yet"
-            description="Add your first employee to get started."
-            actionButton={
-              <button
-                onClick={handleAddEmployee}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors duration-200"
-              >
-                <PlusIcon className="w-5 h-5" />
-                Add Employee
-              </button>
-            }
-          />
-        ) : (
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Employee List ({employees.length})
-              </h3>
-              <div className="text-sm text-gray-600">
-                🔍 Debug: {employees.length} employees loaded
-              </div>
-            </div>
-            <EmployeeTable 
-              employees={employees}
-              onEdit={handleEditEmployee}
-              onDelete={handleDeleteEmployee}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Add Employee Modal */}
-      <AddEmployeeModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmitEmployee}
-        isLoading={isSubmitting}
-      />
     </div>
-  )
+  );
 }
-
-export default Employees
