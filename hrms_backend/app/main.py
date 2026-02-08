@@ -8,7 +8,7 @@ from app.routes import attendance
 from app.routes import dashboard
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+
 
 
 
@@ -17,7 +17,7 @@ app = FastAPI(
     root_path=""
 )
 
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
 
 app.add_middleware(
     TrustedHostMiddleware,
