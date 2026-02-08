@@ -12,7 +12,7 @@ export const getAttendanceByEmployee = async (employeeDbId) => {
   return res.data;
 };
 
-// ✅ ADD THIS (FOR DASHBOARD FILTER)
+// Filter attendance by date range (returns aggregated summary)
 export const filterAttendanceByDate = async (startDate, endDate) => {
   const res = await api.get(
     `/attendance/filter/?start_date=${startDate}&end_date=${endDate}`

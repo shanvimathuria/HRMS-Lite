@@ -3,6 +3,7 @@ import MainLayout from "../components/layout/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import Employees from "../pages/Employees";
 import Attendance from "../pages/Attendance";
+import AttendanceRecords from "../pages/AttendanceRecords";
 
 export default function AppRoutes() {
   return (
@@ -32,6 +33,15 @@ export default function AppRoutes() {
         element={
           <MainLayout>
             <Attendance />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/attendance-records"
+        element={
+          <MainLayout>
+            <AttendanceRecords />
           </MainLayout>
         }
       />

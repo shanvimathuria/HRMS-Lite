@@ -4,7 +4,6 @@ import {
   getDashboardSummary,
   getPresentDays,
 } from "../api/dashboard.api";
-import { filterAttendanceByDate } from "../api/attendance.api";
 
 export default function Dashboard() {
   const [summary, setSummary] = useState({
@@ -15,9 +14,6 @@ export default function Dashboard() {
   });
 
   const [presentDays, setPresentDays] = useState([]);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [loading, setLoading] = useState(false);
 
   /* ---------------- Load dashboard data ---------------- */
   const loadDashboard = async () => {
@@ -37,77 +33,16 @@ export default function Dashboard() {
     loadDashboard();
   }, []);
 
-  /* ---------------- Apply date filter ---------------- */
-  const applyFilter = async () => {
-    if (!startDate || !endDate) {
-      alert("Select start and end date");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const records = await filterAttendanceByDate(
-        startDate,
-        endDate
-      );
-
-      const present = records.filter(
-        (r) => r.status === "Present"
-      ).length;
-
-      const absent = records.filter(
-        (r) => r.status === "Absent"
-      ).length;
-
-      setSummary((prev) => ({
-        ...prev,
-        total_attendance_records: records.length,
-        present_today: present,
-        absent_today: absent,
-      }));
-    } catch (err) {
-      console.error("FILTER ERROR 👉", err);
-      alert("Failed to apply filter");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Dashboard
-          </h1>
-          <p className="text-sm text-gray-500">
-            Overview of HR operations
-          </p>
-        </div>
-
-        {/* Filter */}
-        <div className="flex gap-2">
-          <input
-            type="date"
-            className="border px-2 py-1 rounded text-sm"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-          <input
-            type="date"
-            className="border px-2 py-1 rounded text-sm"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-          <button
-            onClick={applyFilter}
-            className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
-          >
-            Apply
-          </button>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900">
+          Dashboard
+        </h1>
+        <p className="text-sm text-gray-500">
+          Overview of HR operations
+        </p>
       </div>
 
       {/* Cards */}
@@ -175,12 +110,6 @@ export default function Dashboard() {
           </tbody>
         </table>
       </div>
-
-      {loading && (
-        <p className="text-center mt-4 text-gray-500">
-          Applying filter...
-        </p>
-      )}
     </div>
   );
 }

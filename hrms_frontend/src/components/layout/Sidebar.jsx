@@ -9,9 +9,9 @@ const navClass = ({ isActive }) =>
 
 export default function Sidebar() {
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col justify-between">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col justify-between z-40">
       {/* Top */}
-      <div className="p-5">
+      <div className="p-5 flex-1 overflow-y-auto">
         <h1 className="text-xl font-bold">
           HRMS <span className="text-blue-400">Lite</span>
         </h1>
@@ -29,11 +29,14 @@ export default function Sidebar() {
           <NavLink to="/attendance" className={navClass}>
             Attendance
           </NavLink>
+          <NavLink to="/attendance-records" className={navClass}>
+            Attendance Records
+          </NavLink>
         </nav>
       </div>
 
       {/* Bottom */}
-      <div className="p-5 border-t border-gray-800">
+      <div className="p-5 border-t border-gray-800 flex-shrink-0">
         <p className="text-sm font-medium">Admin</p>
         <p className="text-xs text-gray-400">Administrator</p>
       </div>

@@ -32,3 +32,14 @@ export const deleteEmployee = async (employeeId) => {
     throw error;
   }
 };
+
+// Get attendance for an employee
+export const getEmployeeAttendance = async (employeeId) => {
+  try {
+    const response = await api.get(`/attendance/${employeeId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching employee attendance:", error);
+    throw error;
+  }
+};

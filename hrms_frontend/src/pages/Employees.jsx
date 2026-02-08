@@ -3,6 +3,7 @@ import {
   getEmployees,
   createEmployee,
   deleteEmployee,
+  getEmployeeAttendance,
 } from "../api/employees.api";
 
 export default function Employees() {
@@ -22,6 +23,10 @@ export default function Employees() {
   const [attendance, setAttendance] = useState([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceError, setAttendanceError] = useState("");
+
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
   /* ---------------- FETCH EMPLOYEES ---------------- */
   const fetchEmployees = async () => {
@@ -72,20 +77,48 @@ export default function Employees() {
   };
 
   /* ---------------- DELETE EMPLOYEE ---------------- */
-  const handleDelete = async (dbId) => {
-    if (!window.confirm("Delete this employee?")) return;
+  const handleDeleteClick = (emp, e) => {
+    e.stopPropagation();
+    setEmployeeToDelete(emp);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!employeeToDelete) return;
 
     try {
-      await deleteEmployee(dbId);
+      await deleteEmployee(employeeToDelete.id);
       fetchEmployees();
+      setShowDeleteModal(false);
+      setEmployeeToDelete(null);
     } catch (err) {
       console.error("DELETE EMPLOYEE ERROR 👉", err);
       alert("Failed to delete employee");
     }
   };
 
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setEmployeeToDelete(null);
+  };
+
   /* ---------------- ATTENDANCE MODAL ---------------- */
   const openAttendanceModal = async (emp) => {
+    const resolvedId =
+      emp?.id ??
+      emp?.employee_db_id ??
+      emp?.employeeId ??
+      emp?.employee_id;
+
+    if (!resolvedId) {
+      setSelectedEmployee(emp);
+      setIsModalOpen(true);
+      setAttendance([]);
+      setAttendanceError("Missing employee id");
+      setAttendanceLoading(false);
+      return;
+    }
+
     setSelectedEmployee(emp);
     setIsModalOpen(true);
     setAttendance([]);
@@ -93,16 +126,12 @@ export default function Employees() {
     setAttendanceLoading(true);
 
     try {
-      const res = await fetch(
-        `https://hrms-lite-backend-o8u0.onrender.com/attendance/${emp.employee_id}`,
-        { headers: { accept: "application/json" } }
-      );
-      if (!res.ok) throw new Error("Failed to load attendance");
-      const data = await res.json();
+      const data = await getEmployeeAttendance(resolvedId);
+      console.log("Attendance data:", data);
       setAttendance(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("FETCH ATTENDANCE ERROR 👉", err);
-      setAttendanceError("Failed to load attendance");
+      setAttendanceError(err.message || "Failed to load attendance");
     } finally {
       setAttendanceLoading(false);
     }
@@ -172,58 +201,89 @@ export default function Employees() {
       {loading ? (
         <p className="text-gray-500">Loading employees...</p>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-6 py-3 text-left">Employee ID</th>
-                <th className="px-6 py-3 text-left">Full Name</th>
-                <th className="px-6 py-3 text-left">Email</th>
-                <th className="px-6 py-3 text-left">Department</th>
-                <th className="px-6 py-3 text-center">Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {employees.map((emp) => (
-                <tr
-                  key={emp.id}
-                  className="border-t cursor-pointer hover:bg-gray-50"
-                  onClick={() => openAttendanceModal(emp)}
-                >
-                  <td className="px-6 py-4">
-                    {emp.employee_id}
-                  </td>
-                  <td className="px-6 py-4">
-                    {emp.full_name}
-                  </td>
-                  <td className="px-6 py-4">
-                    {emp.email}
-                  </td>
-                  <td className="px-6 py-4">
-                    {emp.department}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(emp.id);
-                      }}
-                      className="text-red-600 hover:text-red-800 text-lg"
-                    >
-                      🗑
-                    </button>
-                  </td>
+        <div>
+          <p className="text-xs text-gray-500 text-right mb-2">
+            Click on employee name to see attendance details
+          </p>
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-6 py-3 text-left">Employee ID</th>
+                  <th className="px-6 py-3 text-left">Full Name</th>
+                  <th className="px-6 py-3 text-left">Email</th>
+                  <th className="px-6 py-3 text-left">Department</th>
+                  <th className="px-6 py-3 text-center">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
 
-          {employees.length === 0 && (
-            <p className="text-center text-gray-500 py-6">
-              No employees found
+              <tbody>
+                {employees.map((emp) => (
+                  <tr
+                    key={emp.id}
+                    className="border-t cursor-pointer hover:bg-gray-50"
+                    onClick={() => openAttendanceModal(emp)}
+                  >
+                    <td className="px-6 py-4">
+                      {emp.employee_id}
+                    </td>
+                    <td className="px-6 py-4">
+                      {emp.full_name}
+                    </td>
+                    <td className="px-6 py-4">
+                      {emp.email}
+                    </td>
+                    <td className="px-6 py-4">
+                      {emp.department}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={(e) => handleDeleteClick(emp, e)}
+                        className="text-red-600 hover:text-red-800 text-lg"
+                      >
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {employees.length === 0 && (
+              <p className="text-center text-gray-500 py-6">
+                No employees found
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-lg border p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              Delete Employee
+            </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{employeeToDelete?.full_name}</strong>? This action cannot be undone.
             </p>
-          )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -259,19 +319,29 @@ export default function Employees() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 text-gray-600">
                     <tr>
+                      <th className="px-4 py-2 text-left">Employee</th>
+                      <th className="px-4 py-2 text-left">Business ID</th>
                       <th className="px-4 py-2 text-left">Date</th>
                       <th className="px-4 py-2 text-left">Status</th>
-                      <th className="px-4 py-2 text-left">Record ID</th>
-                      <th className="px-4 py-2 text-left">Created At</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {attendance.map((a) => (
-                      <tr key={a.id} className="border-t">
+                    {attendance.map((a, idx) => (
+                      <tr key={`${a.employee_db_id}-${a.attendance_date}-${idx}`} className="border-t">
+                        <td className="px-4 py-2">{a.employee_name}</td>
+                        <td className="px-4 py-2">{a.employee_business_id}</td>
                         <td className="px-4 py-2">{a.attendance_date}</td>
-                        <td className="px-4 py-2">{a.status}</td>
-                        <td className="px-4 py-2">{a.id}</td>
-                        <td className="px-4 py-2">{a.created_at}</td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              a.status === "Present"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {a.status}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

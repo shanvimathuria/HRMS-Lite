@@ -107,87 +107,96 @@ export default function Attendance() {
         />
       </div>
 
+      {/* Loading message at top */}
+      {loading && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-700">Loading attendance...</p>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600">
-            <tr>
-              <th className="px-6 py-3 text-left">Employee ID</th>
-              <th className="px-6 py-3 text-left">Name</th>
-              <th className="px-6 py-3 text-center">Status</th>
-              <th className="px-6 py-3 text-center">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {employees.map((emp) => {
-              const status =
-                attendanceMap[emp.id] || "Not Marked";
-
-              return (
-                <tr key={emp.id} className="border-t">
-                  <td className="px-6 py-4">
-                    {emp.employee_id}
-                  </td>
-
-                  <td className="px-6 py-4">
-                    {emp.full_name}
-                  </td>
-
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        status === "Present"
-                          ? "bg-green-100 text-green-700"
-                          : status === "Absent"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {status}
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4 text-center space-x-2">
-                    <button
-                      onClick={() =>
-                        handleMarkAttendance(emp.id, "Present")
-                      }
-                      className="bg-green-600 text-white px-3 py-1 rounded text-xs"
-                    >
-                      Present
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleMarkAttendance(emp.id, "Absent")
-                      }
-                      className="bg-red-600 text-white px-3 py-1 rounded text-xs"
-                    >
-                      Absent
-                    </button>
-                  </td>
+        {!selectedDate ? (
+          <div className="py-12 text-center">
+            <p className="text-gray-500 text-lg">📅 Please select a date first to view and mark attendance</p>
+          </div>
+        ) : (
+          <>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-6 py-3 text-left">Employee ID</th>
+                  <th className="px-6 py-3 text-left">Name</th>
+                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-6 py-3 text-center">Action</th>
                 </tr>
-              );
-            })}
+              </thead>
 
-            {employees.length === 0 && (
-              <tr>
-                <td
-                  colSpan="4"
-                  className="text-center py-6 text-gray-500"
-                >
-                  No employees found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              <tbody>
+                {employees.map((emp) => {
+                  const status =
+                    attendanceMap[emp.id] || "Not Marked";
 
-        {loading && (
-          <p className="text-center py-4 text-gray-500">
-            Loading attendance...
-          </p>
+                  return (
+                    <tr key={emp.id} className="border-t">
+                      <td className="px-6 py-4">
+                        {emp.employee_id}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        {emp.full_name}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            status === "Present"
+                              ? "bg-green-100 text-green-700"
+                              : status === "Absent"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {status}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center space-x-2">
+                        <button
+                          onClick={() =>
+                            handleMarkAttendance(emp.id, "Present")
+                          }
+                          className="bg-green-600 text-white px-3 py-1 rounded text-xs"
+                        >
+                          Present
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleMarkAttendance(emp.id, "Absent")
+                          }
+                          className="bg-red-600 text-white px-3 py-1 rounded text-xs"
+                        >
+                          Absent
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {employees.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan="4"
+                      className="text-center py-6 text-gray-500"
+                    >
+                      No employees found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
     </div>
